@@ -141,4 +141,4 @@ with torch.no_grad():
         correct += (preds == labels).sum().item()
 
 accuracy = (correct / total) * 100
-print(f"Accuracy: {accuracy}") # accuracy = 47%
+print(f"Accuracy: {accuracy}")
