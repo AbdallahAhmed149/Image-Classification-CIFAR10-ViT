@@ -2,8 +2,6 @@
 
 Image classification on the **CIFAR-10** dataset using a **Vision Transformer (ViT)** implemented in **PyTorch**. 🚀
 
-> Current baseline in this repo: ~**47% test accuracy** (as noted in the training script). ✅
-
 ---
 
 ## ✨ Features
