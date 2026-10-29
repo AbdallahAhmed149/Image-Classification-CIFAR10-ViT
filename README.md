@@ -1,119 +1,212 @@
-# 🧠 CIFAR-10 Image Classification with Vision Transformer (ViT)
+# CIFAR-10 Image Classification with Vision Transformer
 
-Image classification on the **CIFAR-10** dataset using a **Vision Transformer (ViT)** implemented in **PyTorch**. 🚀
+[![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-Deep%20Learning-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Dataset: CIFAR-10](https://img.shields.io/badge/Dataset-CIFAR--10-5B8FF9)](https://www.cs.toronto.edu/~kriz/cifar.html)
 
----
+A production-oriented, from-scratch **Vision Transformer (ViT)** for classifying 32×32 RGB images across the 10 CIFAR-10 categories. The repository includes deterministic data splitting, configurable training, validation-based checkpoint selection, held-out test evaluation, per-class metrics, diagnostic plots, and optional Weights & Biases experiment tracking.
 
-## ✨ Features
+## Abstract / Overview
 
-- ✅ End-to-end **ViT** implementation (patch embedding + Transformer encoder + classification head)
-- 🧩 **Patch Embedding** via `Conv2d` projection
-- 🧠 `nn.TransformerEncoder`-based backbone
-- 🔁 Training loop + evaluation loop included
-- 📉 **CosineAnnealingLR** learning-rate scheduler
-- 🧼 CIFAR-10 standard normalization + simple data augmentation
+This project applies a Transformer encoder to small-image classification without relying on a pre-trained backbone. Each image is divided into non-overlapping 4×4 patches, projected into a 256-dimensional token space, augmented with a learnable classification token and positional embeddings, and processed by six Transformer blocks with eight attention heads. The final `[CLS]` representation is mapped to the ten CIFAR-10 classes.
 
----
+The training pipeline is designed for reproducibility and trustworthy evaluation:
 
-## 📁 Project Structure
+- The 50,000-image CIFAR-10 training split is partitioned into **45,000 training** and **5,000 validation** examples using a fixed seed.
+- The **10,000-image test split remains untouched** until final evaluation.
+- The best checkpoint is selected by validation accuracy, then evaluated once on the test set.
+- Metrics, training curves, a confusion matrix, sample predictions, and the exact run configuration are persisted locally.
 
-- `Image_Classification_Vision_Transformer.py` — main training + testing script
-- `README.md` — project documentation
+The reported baseline is approximately **47% test accuracy** with the repository's earlier 10-epoch configuration. The current default configuration is 30 epochs and should be benchmarked on the target hardware before comparing runs.
 
----
+## Architecture & Pipeline
 
-## 🧰 Requirements
-
-- Python 3.9+ (recommended)
-- PyTorch
-- torchvision
-
-Install dependencies:
-
-```bash
-pip install torch torchvision
+```text
+CIFAR-10 download
+       │
+       ├── Train transforms: random horizontal flip + padded random crop + normalization
+       ├── Validation transforms: normalization only
+       └── Test transforms: normalization only
+              │
+       Seeded 45k / 5k train-validation split
+              │
+       32×32 image → 4×4 patch projection → 64 patch tokens
+              │
+       [CLS] token + positional embeddings
+              │
+       6 × Pre-LN Transformer blocks
+       (multi-head self-attention + GELU MLP)
+              │
+       LayerNorm → [CLS] representation → 10-class linear head
+              │
+       Validation checkpoint selection → final test evaluation
+              │
+       models/*.pth + metrics/*.json + diagnostic PNGs
 ```
 
----
+### Training process
 
-## ▶️ How to Run
+1. Download CIFAR-10 automatically into `./data`.
+2. Apply augmentation only to the training view.
+3. Optimize cross-entropy with **AdamW** and cosine-annealed learning rate.
+4. Log batch and epoch metrics locally and optionally to W&B.
+5. Save the best validation checkpoint together with the configuration required to rebuild the model.
 
-Train and evaluate the model:
+### Inference process
+
+`predict.py` restores the saved architecture and weights from a checkpoint. It can classify one RGB image with top-3 probabilities or evaluate a checkpoint across the complete test set and regenerate diagnostic plots.
+
+## Performance Metrics
+
+| Metric | Value / Behavior |
+|---|---:|
+| Reported baseline test accuracy | **~47%** |
+| Classification classes | **10** |
+| Input resolution | **32×32 RGB** |
+| Training data | **45,000 images** |
+| Validation data | **5,000 images** |
+| Held-out test data | **10,000 images** |
+| Patch size | **4×4** |
+| Tokens per image | **64 patches + 1 `[CLS]` token** |
+| Transformer depth | **6 blocks** |
+| Attention heads | **8** |
+| Embedding dimension | **256** |
+| Default batch size | **32** |
+| Default training duration | **30 epochs** |
+| Default optimizer | **AdamW**, learning rate `3e-4`, weight decay `0.01` |
+| Learning-rate schedule | **CosineAnnealingLR** |
+| Reproducibility seed | **42** |
+| Operational latency / throughput | Not benchmarked in the repository |
+
+Accuracy is hardware-, seed-, and configuration-dependent. Use the generated `metrics/*_metrics.json` as the authoritative record for a particular run rather than treating the baseline as a guarantee.
+
+## Tech Stack
+
+- **Python 3.9+**
+- **PyTorch** and **torchvision** for modeling, optimization, and CIFAR-10
+- **NumPy** for metric calculations
+- **Pillow** for single-image inference
+- **Matplotlib** for training curves, confusion matrices, and sample predictions
+- **Weights & Biases** for optional experiment tracking and model artifacts
+
+## Repository Structure
+
+| Path | Responsibility |
+|---|---|
+| `config.py` | Centralized dataclass configuration and run naming |
+| `dataset.py` | CIFAR-10 download, transforms, seeded split, and data loaders |
+| `model.py` | Patch embedding, attention, Transformer blocks, and ViT classifier |
+| `engine.py` | Training and evaluation loops, checkpoint selection, and W&B logging |
+| `main.py` | End-to-end training and final test evaluation entry point |
+| `predict.py` | Checkpoint-based test evaluation and single-image inference |
+| `utils.py` | Checkpoint persistence, metrics, plots, and reproducibility helpers |
+| `models/` | Generated model checkpoints |
+| `metrics/` | Generated JSON metrics and diagnostic images |
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.9 or newer
+- `pip`
+- Optional: CUDA-enabled PyTorch installation and an NVIDIA-compatible environment
+- Optional: a W&B account if experiment tracking is enabled
+
+### Local setup
 
 ```bash
-python Image_Classification_Vision_Transformer.py
+git clone https://github.com/AbdallahAhmed149/Image-Classification-CIFAR10-ViT.git
+cd Image-Classification-CIFAR10-ViT
+
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\\Scripts\\activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-Notes:
-- The script will automatically download **CIFAR-10** into `./data` on first run. 📦
-- It will train for **10 epochs** by default.
+The first training or inference run downloads CIFAR-10 into `./data`. Generated checkpoints and reports are written to `models/` and `metrics/`.
 
----
+### Environment variables
 
-## ⚙️ Configuration (Key Hyperparameters)
+W&B is enabled by default in `config.py`. Authenticate before training if you want remote tracking:
 
-These are defined at the top of `Image_Classification_Vision_Transformer.py`:
+```bash
+export WANDB_API_KEY="your_api_key"
+wandb login
+```
 
-- **batch size**: `32`
-- **learning rate**: `3e-4`
-- **epochs**: `10`
-- **patch size**: the model is instantiated with `patch_size=4`
-- **optimizer**: Adam + `weight_decay=0.01`
-- **scheduler**: Cosine Annealing (`T_max=50`)
+Alternatively, disable W&B entirely for an offline/local run:
 
----
+```bash
+python main.py --no_wandb
+```
 
-## 🧠 Model Overview
+The repository currently does not include a `Dockerfile` or container orchestration configuration; local virtual-environment execution is the supported setup path.
 
-The model follows the standard ViT recipe:
+## Training & Inference
 
-1. Split the image into fixed-size patches (implemented using a `Conv2d` projection)
-2. Add a learnable **[CLS] token**
-3. Add learnable **positional embeddings**
-4. Pass tokens through a stack of Transformer encoder blocks
-5. Classify using the final representation of the **CLS token**
+### Train with defaults
 
----
+```bash
+python main.py
+```
 
-## 📊 Results
+### Reproduce a controlled run
 
-- Reported in the script: **~47% accuracy** on CIFAR-10.
+```bash
+python main.py \
+  --epochs 30 \
+  --batch_size 32 \
+  --lr 0.0003 \
+  --patch_size 4 \
+  --embed_dim 256 \
+  --depth 6 \
+  --num_heads 8 \
+  --no_wandb
+```
 
-This is a solid starting point, and there are many ways to improve performance (see below). 📈
+The command prints the selected device and parameter count, saves the best validation checkpoint as `models/ViT_CIFAR10_P4_E30_B32.pth`, and writes the run record and plots under `metrics/`.
 
----
+### Evaluate the default checkpoint
 
-## 🔥 Ideas to Improve Accuracy
+```bash
+python predict.py
+```
 
-If you want higher accuracy, consider:
+### Evaluate a specific checkpoint
 
-- 🏋️ Train longer (e.g., 50–200 epochs)
-- 📈 Use warmup + cosine decay (common for ViT training)
-- 🧪 Tune hyperparameters (LR, weight decay, depth/heads/embedding dim)
-- 🧰 Add regularization (label smoothing, dropout, stochastic depth)
-- 🧠 Use stronger augmentation (RandAugment, MixUp, CutMix)
-- 💾 Save best checkpoint and evaluate the best model
+```bash
+python predict.py --ckpt models/ViT_CIFAR10_P4_E30_B32.pth
+```
 
----
+### Classify a single image
 
-## 📝 Notes
+```bash
+python predict.py \
+  --ckpt models/ViT_CIFAR10_P4_E30_B32.pth \
+  --image path/to/image.jpg
+```
 
-- The code is written to be easy to read and modify for learning / experimentation.
-- ViTs can be data-hungry; CIFAR-10 is small, so careful tuning and augmentation help a lot.
+The image is converted to RGB, resized to 32×32, normalized with CIFAR-10 statistics, and reported with the top three class probabilities.
 
----
+## Reproducibility and Experiment Outputs
 
-## 🤝 Contributing
+- Set the seed with `ViTConfig.seed` (default: `42`).
+- Keep the generated checkpoint and matching metrics JSON together; the checkpoint stores the full model configuration.
+- Compare `best_val_acc`, `final.test_acc`, `num_parameters`, `train_time_sec`, and the saved `history` fields between runs.
+- The test set is intentionally excluded from model selection to reduce evaluation leakage.
 
-Contributions are welcome!
+## Contributing
 
-- Open an issue to propose improvements
-- Submit a PR for fixes, refactors, or new features
+Contributions are welcome. For substantial changes:
 
----
+1. Open an issue describing the proposed change or experiment.
+2. Keep configuration changes explicit and reproducible.
+3. Preserve the train/validation/test separation.
+4. Add or update tests and documentation where behavior changes.
+5. Open a focused pull request with the command used to validate the change and any before/after metrics.
 
-## 📜 License
+## License
 
-No license file is currently included in the repository.
-
-If you plan to share or reuse this work broadly, consider adding a license (e.g., MIT, Apache-2.0). 🧾
+This project is released under the [MIT License](LICENSE).
