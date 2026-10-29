@@ -18,7 +18,7 @@ The training pipeline is designed for reproducibility and trustworthy evaluation
 - The best checkpoint is selected by validation accuracy, then evaluated once on the test set.
 - Metrics, training curves, a confusion matrix, sample predictions, and the exact run configuration are persisted locally.
 
-The reported baseline is approximately **47% test accuracy** with the repository's earlier 10-epoch configuration. The current default configuration is 30 epochs and should be benchmarked on the target hardware before comparing runs.
+The latest recorded 30-epoch run achieved **77.78% test accuracy** and **78.46% best validation accuracy** at epoch 27. It used the default ViT configuration, completed in **1,448.7 seconds (24.1 minutes)** on CUDA, and contained **4,771,082 trainable parameters**.
 
 ## Architecture & Pipeline
 
@@ -61,7 +61,12 @@ CIFAR-10 download
 
 | Metric | Value / Behavior |
 |---|---:|
-| Reported baseline test accuracy | **~47%** |
+| Test accuracy | **77.78%** |
+| Test loss | **0.6666** |
+| Best validation accuracy | **78.46%** |
+| Best validation epoch | **27** |
+| Model parameters | **4,771,082** |
+| Training time | **1,448.7 sec (24.1 min)** |
 | Classification classes | **10** |
 | Input resolution | **32×32 RGB** |
 | Training data | **45,000 images** |
@@ -79,7 +84,22 @@ CIFAR-10 download
 | Reproducibility seed | **42** |
 | Operational latency / throughput | Not benchmarked in the repository |
 
-Accuracy is hardware-, seed-, and configuration-dependent. Use the generated `metrics/*_metrics.json` as the authoritative record for a particular run rather than treating the baseline as a guarantee.
+### Per-class test accuracy
+
+| Class | Accuracy |
+|---|---:|
+| Plane | 78.8% |
+| Car | 90.4% |
+| Bird | 73.0% |
+| Cat | 60.0% |
+| Deer | 70.1% |
+| Dog | 69.3% |
+| Frog | 80.0% |
+| Horse | 84.6% |
+| Ship | 85.8% |
+| Truck | 85.8% |
+
+These values come from `metrics/ViT_CIFAR10_P4_E30_B32_metrics.json`. Accuracy and training time are hardware-, seed-, and configuration-dependent; use that JSON file as the authoritative record for future runs.
 
 ## Tech Stack
 
